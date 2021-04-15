@@ -1,0 +1,11 @@
+animal_name   pos_x pos_y age sex food_capacity sight_range speed agility reproduction_pro pregnant baby_animal food_owned
+rabbit              0     0   1   0             4           2     4       5             0.25       -1          -1          4
+rabbit              0     0   1   1             4           2     4       5             0.25       -1          -1          4
+fox                 0     0   1   0             5           5     5       0             0.25       -1          -1          5
+fox                 0     0   1   1             5           5     5       0             0.25       -1          -1          5
+fox                 99    0   1   0             5           5     5       0             0.25       -1          -1          5
+fox                 99    0   1   1             5           5     5       0             0.25       -1          -1          5
+fox                 99   99   1   0             5           5     5       0             0.25       -1          -1          5
+fox                 99   99   1   1             5           5     5       0             0.25       -1          -1          5
+fox                 0    99   1   0             5           5     5       0             0.25       -1          -1          5
+fox                 0    99   1   1             5           5     5       0             0.25       -1          -1          5

@@ -1,0 +1,995 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<cstdlib>
+#include<cstdio>
+#include<time.h>
+#include<math.h>
+#define food_appearing_rate 0.3
+#define map_size 100
+
+
+bool get_animals(class animalss* animals);
+void simulate(class animalss* animals);
+bool save_animals(class animalss* animals);
+
+class rabbit
+{
+	public:
+	unsigned int position_x;
+	unsigned int position_y; //position on map at that moment
+	int age; //age in turns, age = -1 means death
+	int sex; //0-female, 1-male
+	int food_capacity; //maximum food that can be magazine in animal body
+	int sight_range; //range in squares in which animal can recognize objects
+	int speed; //number of squares that animal can travel in one turn
+	int agility; //number used to count which animal win fight or escape
+	float reproduction_probability; //probability for successful reproduction;
+	int pregnant; // number of turns needed to get birth -1 - not pregnant
+	int baby_animal; // number of baby that is unborn yet, -1 not pregnant
+	int owned_food; //food that animal have in it body at that moment
+	int movements; //number of squares that animal can move yet
+	
+	rabbit(unsigned int position_x, unsigned int position_y, int age, int sex, int food_capacity, int sight_range, int speed, int agility,  float reproduction_probability, int pregnant, int baby_animal, int owned_food)
+	{
+		this->position_x = position_x;
+		this->position_y = position_y;
+		this->age = age;
+		this->sex = sex;
+		this->food_capacity = food_capacity;
+		this->sight_range = sight_range;
+		this->speed = speed;
+		this->movements = speed;
+		this->agility = agility;
+		this->reproduction_probability = reproduction_probability;
+		this->pregnant = pregnant;
+		this->baby_animal = baby_animal;
+		this->owned_food = owned_food;
+	}
+	
+	rabbit(void)
+	{
+		this->position_x = 0;
+		this->position_y = 0;
+		this->age = -1;
+		this->sex = 0;
+		this->food_capacity = 0;
+		this->sight_range = 0;
+		this->speed = 0;
+		this->movements = 0;
+		this->agility = 0;
+		this->reproduction_probability = 0;
+		this->pregnant = -1;
+		this->baby_animal = -1;
+		this->owned_food = 0;
+	}
+	
+	void eat(bool map[map_size][map_size])
+	{
+		if(map[this->position_x][this->position_y] == 1)
+		{
+			if(this->owned_food < this->food_capacity)
+			{
+				map[this->position_x][this->position_y] = 0;
+				this->owned_food++;
+			}
+		}
+	}
+	
+	bool survive() //return = 0 - death 1 - survive
+	{
+		if(this->owned_food == 0 && rand()%2 == 0) return 0;
+		if(this->owned_food > 0)this->owned_food--;
+		this->age++;
+		if(this->age > 20 && rand()%5 == 0) return 0;
+		return 1;
+	}
+	
+};
+
+
+class fox
+{
+	public:
+	unsigned int position_x;
+	unsigned int position_y; //position on map at that moment
+	int age; //age in turns, age = -1 means death
+	int sex; //0-female, 1-male
+	int food_capacity; //maximum food that can be magazine in animal body
+	int sight_range; //range in squares in which animal can recognize objects
+	int speed; //number of squares that animal can travel in one turn
+	int agility; //number used to count which animal win fight or escape
+	float reproduction_probability; //probability for successful reproduction;
+	int pregnant; // number of turns needed to get birth -1 - not pregnant
+	int baby_animal; // number of baby that is unborn yet, -1 not pregnant
+	int owned_food; //food that animal have in it body at that moment
+	int movements; //number of squares that animal can move yet
+	
+	fox(unsigned int position_x, unsigned int position_y, int age, int sex, int food_capacity, int sight_range, int speed, int agility,  float reproduction_probability, int pregnant, int baby_animal, int owned_food)
+	{
+		this->position_x = position_x;
+		this->position_y = position_y;
+		this->age = age;
+		this->sex = sex;
+		this->food_capacity = food_capacity;
+		this->sight_range = sight_range;
+		this->speed = speed;
+		this->movements = speed;
+		this->agility = agility;
+		this->reproduction_probability = reproduction_probability;
+		this->pregnant = pregnant;
+		this->baby_animal = baby_animal;
+		this->owned_food = owned_food;
+	}
+	
+	fox(void)
+	{
+		this->position_x = 0;
+		this->position_y = 0;
+		this->age = -1;
+		this->sex = 0;
+		this->food_capacity = 0;
+		this->sight_range = 0;
+		this->speed = 0;
+		this->movements = 0;
+		this->agility = 0;
+		this->reproduction_probability = 0;
+		this->pregnant = -1;
+		this->baby_animal = -1;
+		this->owned_food = 0;
+	}
+	
+	bool survive() //return = 0 - death 1 - survive
+	{
+		if(this->owned_food == 0 && rand()%2 == 0) return 0;
+		if(this->owned_food > 0)this->owned_food--;
+		this->age++;
+		if(this->age > 20 && rand()%5 == 0) return 0;
+		return 1;
+	}
+	
+};
+
+class animalss
+{
+	public:
+	rabbit *rabbits; //array where objects rabbit will be store
+	rabbit *rabbits_baby; //array where objects rabbit that are unnborn yet will be store
+	fox *foxes; //array where objects fox will be store
+	fox *foxes_baby; //array where objects fox that are unnborn yet will be store
+	unsigned int rabbits_counter; // number of objects rabbit in rabbits
+	unsigned int rabbits_baby_counter; // number of objects rabbit in rabbits_baby
+	unsigned int foxes_counter; // number of objects fox in rabbits
+	unsigned int foxes_baby_counter; // number of objects fox in rabbits_baby
+	unsigned int movements_max; //the largest number of moves for an animal
+	
+	animalss(void)
+	{
+		this->rabbits = NULL;
+		this->rabbits_baby = NULL;
+		this->foxes = NULL;
+		this->foxes_baby = NULL;
+		this->rabbits_counter = 0;
+		this->rabbits_baby_counter = 0;
+		this->foxes_counter = 0;
+		this->foxes_baby_counter = 0;
+		this->movements_max = 0;
+	}
+	
+	void rabbits_new(int position_x, int position_y, int age, int sex, int food_capacity, int sight_range, int speed, int agility,  float reproduction_probability, int pregnant, int baby_animal, int owned_food)
+	{
+		int random;
+		this->rabbits_counter++;
+		this->rabbits = (rabbit*) realloc(this->rabbits,sizeof(rabbit)*this->rabbits_counter);
+		if(this->rabbits == NULL) printf("error when try to allocate memory");
+		if(position_x > map_size - 1) position_x = map_size - 1; //needed when we make smaller map 
+		if(position_y > map_size - 1) position_y = map_size - 1;
+		if(food_capacity < 0) food_capacity = 0;
+		if(sight_range < 0) sight_range = 0;
+		if(speed < 0) speed = 0;
+		if(agility < 0) agility = 0;
+		if(reproduction_probability < 0) reproduction_probability = 0.0;
+		if(reproduction_probability > 1) reproduction_probability = 1.0;
+		while(food_capacity + sight_range + speed + agility > 15) //ograniczenie maksymalnych statystyk
+		{
+			random = rand()%4;
+			if(random == 0 && food_capacity > 0) food_capacity--;
+			if(random == 1 && sight_range > 0) sight_range--;
+			if(random == 2 && speed > 0) speed--;
+			if(random == 3 && agility > 0) agility--;
+		}
+		this->rabbits[this->rabbits_counter - 1] =  rabbit(position_x, position_y, age, sex, food_capacity, sight_range, speed, agility,  reproduction_probability, pregnant, baby_animal, owned_food);
+		if(speed > this->movements_max) this->movements_max = speed;
+	}
+	
+	void foxes_new(int position_x, int position_y, int age, int sex, int food_capacity, int sight_range, int speed, int agility,  float reproduction_probability, int pregnant, int baby_animal, int owned_food)
+	{
+		int random;
+		this->foxes_counter++;
+		this->foxes = (fox*) realloc(this->foxes,sizeof(fox)*this->foxes_counter);
+		if(this->foxes == NULL) printf("error when try to allocate memory");
+		if(position_x > map_size - 1) position_x = map_size - 1; //needed when we make smaller map 
+		if(position_y > map_size - 1) position_y = map_size - 1;
+		if(food_capacity < 0) food_capacity = 0;
+		if(sight_range < 0) sight_range = 0;
+		if(speed < 0) speed = 0;
+		if(agility < 0) agility = 0;
+		if(reproduction_probability < 0) reproduction_probability = 0.0;
+		if(reproduction_probability > 1) reproduction_probability = 1.0;
+		while(food_capacity + sight_range + speed + agility > 20) //ograniczenie maksymalnych statystyk
+		{
+			random = rand()%4;
+			if(random == 0 && food_capacity > 0) food_capacity--;
+			if(random == 1 && sight_range > 0) sight_range--;
+			if(random == 2 && speed > 0) speed--;
+			if(random == 3 && agility > 0) agility--;
+		}
+		this->foxes[this->foxes_counter - 1] =  fox(position_x, position_y, age, sex, food_capacity, sight_range, speed, agility,  reproduction_probability, pregnant, baby_animal, owned_food);
+		if(speed > this->movements_max) this->movements_max = speed;
+	}
+	
+	void rabbits_baby_new(int position_x, int position_y, int age, int sex, int food_capacity, int sight_range, int speed, int agility,  float reproduction_probability, int pregnant, int baby_animal, int owned_food)
+	{
+		this->rabbits_baby_counter++;
+		this->rabbits_baby = (rabbit*) realloc(this->rabbits_baby,sizeof(rabbit)*this->rabbits_baby_counter);
+		if(this->rabbits_baby == NULL) printf("error when try to allocate memory");
+		this->rabbits_baby[this->rabbits_baby_counter - 1] =  rabbit(position_x, position_y, age, sex, food_capacity, sight_range, speed, agility,  reproduction_probability, pregnant, baby_animal, owned_food);
+	}
+	
+	void foxes_baby_new(int position_x, int position_y, int age, int sex, int food_capacity, int sight_range, int speed, int agility,  float reproduction_probability, int pregnant, int baby_animal, int owned_food)
+	{
+		this->foxes_baby_counter++;
+		this->foxes_baby = (fox*) realloc(this->foxes_baby,sizeof(fox)*this->foxes_baby_counter);
+		if(this->foxes_baby == NULL) printf("error when try to allocate memory");
+		this->foxes_baby[this->foxes_baby_counter - 1] =  fox(position_x, position_y, age, sex, food_capacity, sight_range, speed, agility,  reproduction_probability, pregnant, baby_animal, owned_food);
+	}
+	
+	void rabbits_delete(int position)
+	{
+		if(position >= this->rabbits_counter) printf("error when try to delete object rabbit");
+		if(this->rabbits[position].baby_animal != -1) this->rabbits_baby_delete(this->rabbits[position].baby_animal);
+		for(int i = position; i + 1 < this->rabbits_counter; i++)
+		{
+			this->rabbits[i] = this->rabbits[i+1];
+		}
+		this->rabbits_counter--;
+		this->rabbits = (rabbit*) realloc(this->rabbits,sizeof(rabbit)*this->rabbits_counter);
+	}
+	
+	void foxes_delete(int position)
+	{
+		if(position >= this->foxes_counter) printf("error when try to delete object fox");
+		if(this->foxes[position].baby_animal != -1) this->foxes_baby_delete(this->foxes[position].baby_animal);
+		for(int i = position; i + 1 < this->foxes_counter; i++)
+		{
+			this->foxes[i] = this->foxes[i+1];
+		}
+		this->foxes_counter--;
+		this->foxes = (fox*) realloc(this->foxes,sizeof(fox)*this->foxes_counter);
+	}
+	
+	void rabbits_baby_delete(int position)
+	{
+		if (position >= this->rabbits_baby_counter) printf("error when try to delete object rabbit");
+		for(int i = position; i + 1 < this->rabbits_baby_counter; i++)
+		{
+			this->rabbits_baby[i] = this->rabbits_baby[i+1];
+		}
+		for(int i = 0; i < this->rabbits_counter; i++)
+		{
+			if(this->rabbits[i].baby_animal > position) this->rabbits[i].baby_animal--;
+		}
+		this->rabbits_baby_counter--;
+		this->rabbits_baby = (rabbit*) realloc(this->rabbits_baby,sizeof(rabbit)*this->rabbits_baby_counter);
+	}
+	
+	void foxes_baby_delete(int position)
+	{
+		if (position >= this->foxes_baby_counter) printf("error when try to delete object fox");
+		for(int i = position; i + 1 < this->foxes_baby_counter; i++)
+		{
+			this->foxes_baby[i] = this->foxes_baby[i+1];
+		}
+		for(int i = 0; i < this->foxes_counter; i++)
+		{
+			if(this->foxes[i].baby_animal > position) this->foxes[i].baby_animal--;
+		}
+		this->foxes_baby_counter--;
+		this->foxes_baby = (fox*) realloc(this->foxes_baby,sizeof(fox)*this->foxes_baby_counter);
+	}
+};
+
+int main(void)
+{
+	srand(time(NULL));
+	animalss animals = animalss();
+	if(get_animals(&animals) == 0) return 0;
+	simulation:
+	simulate(&animals);
+	if(save_animals(&animals) == 0) return 0;
+	goto simulation;
+}
+
+bool get_animals(class animalss* animals)
+{
+	char animal_name[20];
+	int position_x;
+	int position_y; //position on map at that moment
+	int age; //age in turns, age = -1 means death
+	int sex; //0-female, 1-male
+	int food_capacity; //maximum food that can be magazine in animal body
+	int sight_range; //range in squares in which animal can recognize objects
+	int speed; //number of squares that animal can travel in one turn
+	int agility; //number used to count which animal win fight or escape
+	float reproduction_probability; //probability for successful reproduction;
+	int pregnant; // number of turns needed to get birth -1 - not pregnant
+	int baby_animal; // number of baby that is unborn yet, -1 not pregnant
+	int owned_food; //food that animal have in it body at that moment
+    FILE *f= fopen("animals.txt", "r");
+    if(f == NULL)
+    {
+        printf("animals.txt not found");
+        return 0;
+    }
+    fscanf(f, "%s%s%s%s%s%s%s%s%s%s%s%s%s",animal_name,animal_name,animal_name,animal_name,animal_name,animal_name,animal_name,animal_name,animal_name,animal_name,animal_name,animal_name,animal_name);
+    for(int i = 0;;i++)
+    {
+    	animal_name[0] = '0';
+    	animal_name[1] = '0';
+    	animal_name[2] = '0';
+    	animal_name[3] = '0';
+    	animal_name[4] = '0';
+    	animal_name[5] = '0';
+    	animal_name[6] = '0';
+		fscanf(f, "%s\n",&animal_name);
+		if(animal_name[0] == 'r' && animal_name[1] == 'a' && animal_name[2] == 'b' && animal_name[3] == 'b' && animal_name[4] == 'i' && animal_name[5] == 't' && animal_name[6] == '_' && animal_name[7] == 'b' && animal_name[8] == 'a' && animal_name[9] == 'b' && animal_name[10] == 'y')
+		{
+			fscanf(f, "%d %d %d %d %d %d %d %d %f %d %d %d", &position_x, &position_y, &age, &sex, &food_capacity, &sight_range, &speed, &agility,  &reproduction_probability, &pregnant, &baby_animal, &owned_food);
+			animals->rabbits_baby_new(position_x, position_y, age, sex, food_capacity, sight_range, speed, agility, reproduction_probability, pregnant, baby_animal, owned_food);
+		}
+        else if(animal_name[0] == 'r' && animal_name[1] == 'a' && animal_name[2] == 'b' && animal_name[3] == 'b' && animal_name[4] == 'i' && animal_name[5] == 't')
+		{
+			fscanf(f, "%d %d %d %d %d %d %d %d %f %d %d %d", &position_x, &position_y, &age, &sex, &food_capacity, &sight_range, &speed, &agility,  &reproduction_probability, &pregnant, &baby_animal, &owned_food);
+			animals->rabbits_new(position_x, position_y, age, sex, food_capacity, sight_range, speed, agility, reproduction_probability, pregnant, baby_animal, owned_food);
+		}
+		else if(animal_name[0] == 'f' && animal_name[1] == 'o' && animal_name[2] == 'x' && animal_name[3] == '_' && animal_name[4] == 'b' && animal_name[5] == 'a' && animal_name[6] == 'b' && animal_name[7] == 'y')
+		{
+			fscanf(f, "%d %d %d %d %d %d %d %d %f %d %d %d", &position_x, &position_y, &age, &sex, &food_capacity, &sight_range, &speed, &agility,  &reproduction_probability, &pregnant, &baby_animal, &owned_food);
+			animals->foxes_baby_new(position_x, position_y, age, sex, food_capacity, sight_range, speed, agility, reproduction_probability, pregnant, baby_animal, owned_food);
+		}
+		else if(animal_name[0] == 'f' && animal_name[1] == 'o' && animal_name[2] == 'x')
+		{
+			fscanf(f, "%d %d %d %d %d %d %d %d %f %d %d %d", &position_x, &position_y, &age, &sex, &food_capacity, &sight_range, &speed, &agility,  &reproduction_probability, &pregnant, &baby_animal, &owned_food);
+			animals->foxes_new(position_x, position_y, age, sex, food_capacity, sight_range, speed, agility, reproduction_probability, pregnant, baby_animal, owned_food);
+		}
+        else
+        {
+        	printf("error when try to get animals name from animals.txt");
+        	return 0;
+		}
+        if(feof(f) != 0) break;
+    }
+    fclose(f);
+	return 1;
+}
+
+bool save_animals(class animalss* animals)
+{
+	FILE *f= fopen("animals_temp.txt", "w");
+    if(f == NULL)
+    {
+        printf("animals.txt not work");
+        return 0;
+    }
+    fprintf(f, "animal_name   pos_x pos_y age sex food_capacity sight_range speed agility reproduction_pro pregnant baby_animal food_owned");
+    for(int i = 0; i < animals->rabbits_counter;i++)
+    {
+    	fprintf(f, "\nrabbit       %5d %5d %3d %3d %13d %11d %5d %7d %16.2f %8d %11d %10d",animals->rabbits[i].position_x, animals->rabbits[i].position_y, animals->rabbits[i].age, animals->rabbits[i].sex, animals->rabbits[i].food_capacity, animals->rabbits[i].sight_range, animals->rabbits[i].speed, animals->rabbits[i].agility, animals->rabbits[i].reproduction_probability, animals->rabbits[i].pregnant, animals->rabbits[i].baby_animal, animals->rabbits[i].owned_food);
+	}
+	for(int i = 0; i < animals->rabbits_baby_counter;i++)
+    {
+    	fprintf(f, "\nrabbit_baby  %5d %5d %3d %3d %13d %11d %5d %7d %16.2f %8d %11d %10d",animals->rabbits_baby[i].position_x, animals->rabbits_baby[i].position_y, animals->rabbits_baby[i].age, animals->rabbits_baby[i].sex, animals->rabbits_baby[i].food_capacity, animals->rabbits_baby[i].sight_range, animals->rabbits_baby[i].speed, animals->rabbits_baby[i].agility, animals->rabbits_baby[i].reproduction_probability, animals->rabbits_baby[i].pregnant, animals->rabbits_baby[i].baby_animal, animals->rabbits_baby[i].owned_food);
+	}
+	for(int i = 0; i < animals->foxes_counter;i++)
+    {
+    	fprintf(f, "\nfox          %5d %5d %3d %3d %13d %11d %5d %7d %16.2f %8d %11d %10d",animals->foxes[i].position_x, animals->foxes[i].position_y, animals->foxes[i].age, animals->foxes[i].sex, animals->foxes[i].food_capacity, animals->foxes[i].sight_range, animals->foxes[i].speed, animals->foxes[i].agility, animals->foxes[i].reproduction_probability, animals->foxes[i].pregnant, animals->foxes[i].baby_animal, animals->foxes[i].owned_food);
+	}
+	for(int i = 0; i < animals->foxes_baby_counter;i++)
+    {
+    	fprintf(f, "\nfox_baby     %5d %5d %3d %3d %13d %11d %5d %7d %16.2f %8d %11d %10d",animals->foxes_baby[i].position_x, animals->foxes_baby[i].position_y, animals->foxes_baby[i].age, animals->foxes_baby[i].sex, animals->foxes_baby[i].food_capacity, animals->foxes_baby[i].sight_range, animals->foxes_baby[i].speed, animals->foxes_baby[i].agility, animals->foxes_baby[i].reproduction_probability, animals->foxes_baby[i].pregnant, animals->foxes_baby[i].baby_animal, animals->foxes_baby[i].owned_food);
+	}
+	fclose(f);
+	remove("animals.txt");
+	rename("animals_temp.txt","animals.txt");
+	
+	f = fopen("map_temp.txt", "w");
+	if(f == NULL)
+    {
+        printf("map.txt not work");
+        return 0;
+    }
+    unsigned char map_print[map_size][map_size];
+    for(int i = 0; i < map_size; i++)
+    {
+    	for(int k = 0; k < map_size; k++)
+   		{
+    		map_print[i][k] = ' ';
+		}
+	}
+    for(int i = 0; i < animals->rabbits_counter;i++)
+    {
+    	map_print[animals->rabbits[i].position_y][animals->rabbits[i].position_x] = 'R';
+	}
+	for(int i = 0; i < animals->foxes_counter;i++)
+    {
+    	map_print[animals->foxes[i].position_y][animals->foxes[i].position_x] = 'F';
+	}
+	fprintf(f,"/");
+	for(int i = 0; i < map_size; i++) fprintf(f,"-");
+	fprintf(f,"/\n");
+	for(int i = 0; i < map_size; i++)
+    {
+    	fprintf(f,"|");
+    	for(int k = 0; k < map_size; k++)
+   		{
+    		fprintf(f,"%c",map_print[i][k]);
+		}
+		fprintf(f,"|\n");
+	}
+	fprintf(f,"/");
+	for(int i = 0; i < map_size; i++) fprintf(f,"-");
+	fprintf(f,"/");
+	fclose(f);
+	remove("map.txt");
+	rename("map_temp.txt","map.txt");
+	return 1;
+}
+
+void simulate(class animalss* animals)
+{
+	bool map[map_size][map_size]; // 0 - no food, 1 - there is a food
+	unsigned int number_of_rounds;
+	unsigned int number_of_rabbits_start = animals->rabbits_counter; //how many rabbits where on the start of round
+	unsigned int number_of_foxes_start = animals->foxes_counter; //how many foxes where on the start of round
+	unsigned int random;
+	unsigned int nearest_food = 1000;
+	unsigned int nearest_animal_for_breeding = 1000;
+	bool predatorx1, predatorx2, predatory1, predatory2; //variables needed to see position of the predator
+	////////variables used to reproduct/////////////////////////////////////////
+	int sex; //0-female, 1-male
+	int food_capacity; //maximum food that can be magazine in animal body
+	int sight_range; //range in squares in which animal can recognize objects
+	int speed; //number of squares that animal can travel in one turn
+	int agility; //number used to count which animal win fight or escape
+	float reproduction_probability; //probability for successful reproduction;
+	//////////////////simulation////////////////////////////////////////////////////
+	printf("how many rounds do you want to simulate?\n");
+	scanf("%d",&number_of_rounds);
+	for(unsigned int i = 0; i < number_of_rounds; i++)
+	{
+		for(unsigned int l = 0; l < map_size; l++)
+		{
+			for(unsigned int m = 0; m < map_size; m++)
+			{
+				if(rand()%101 <= food_appearing_rate*100) map[l][m] = 1;
+				else map[l][m] = 0;
+			}
+		}
+		for(unsigned int k = 0; k < animals->rabbits_counter; k++)
+		{
+			animals->rabbits[k].movements = animals->rabbits[k].speed;
+		}
+		for(unsigned int k = 0; k < animals->foxes_counter; k++)
+		{
+			animals->foxes[k].movements = animals->foxes[k].speed;
+		}
+		for(unsigned int n = 0; n < animals->movements_max; n++)
+		{
+///////////////////////////////////////////////////////////////////////////rabbits////////////////////////////////////////////////////////////
+			for(unsigned int k = 0; k < animals->rabbits_counter; k++)
+			{
+				nearest_food = 1000;
+				nearest_animal_for_breeding = 1000;
+				predatorx1 = 0;
+				predatorx2 = 0;
+				predatory1 = 0;
+				predatory2 = 0;
+				
+	////////////////rabbits moves///////////////////////////////////////////////////////////////////
+				if(animals->rabbits[k].movements != 0 )
+				{
+					animals->rabbits[k].movements--;
+					
+					for(unsigned int l = 0; l < animals->foxes_counter; l++) //looking for predator
+					{
+						if(animals->rabbits[k].position_x == animals->foxes[l].position_x + 1) predatorx1 = 1;
+						if(animals->rabbits[k].position_x == animals->foxes[l].position_x - 1) predatorx2 = 1;
+						if(animals->rabbits[k].position_y == animals->foxes[l].position_y + 1) predatory1 = 1;
+						if(animals->rabbits[k].position_y == animals->foxes[l].position_y - 1) predatory2 = 1;
+					}
+					if((predatorx2 == 1 || predatory1 == 1 || predatory2 == 1) && animals->rabbits[k].position_x + 1 < map_size && predatorx1 == 0)
+					{
+						animals->rabbits[k].position_x++;
+						goto rabbits_eat;
+					}
+					if((predatorx1 == 1 || predatory1 == 1 || predatory2 == 1) && animals->rabbits[k].position_x - 1 >= 0 && predatorx2 == 0)
+					{
+						animals->rabbits[k].position_x--;
+						goto rabbits_eat;
+					}
+					if((predatorx1 == 1 || predatorx2 == 1 || predatory2 == 1) && animals->rabbits[k].position_y + 1 < map_size && predatory1 == 0)
+					{
+						animals->rabbits[k].position_y++;
+						goto rabbits_eat;
+					}
+					if((predatorx1 == 1 || predatorx2 == 1 || predatory1 == 1) && animals->rabbits[k].position_y - 1 >= 0 && predatory2 == 0)
+					{
+						animals->rabbits[k].position_y--;
+						goto rabbits_eat;
+					}
+					
+					if(animals->rabbits[k].owned_food >= 2 && animals->rabbits[k].pregnant == -1) //looking for animal to breed
+					{
+						for(unsigned int l = 0; l < animals->rabbits_counter; l++)
+						{
+							if(abs(animals->rabbits[l].position_x - animals->rabbits[k].position_x) <= animals->rabbits[k].sight_range && abs(animals->rabbits[l].position_y - animals->rabbits[k].position_y) <= animals->rabbits[k].sight_range && animals->rabbits[l].pregnant == -1 && animals->rabbits[l].owned_food >= 2 && animals->rabbits[k].sex != animals->rabbits[l].sex)
+							{
+								if(abs(animals->rabbits[l].position_x - animals->rabbits[k].position_x) + abs(animals->rabbits[l].position_y - animals->rabbits[k].position_y) < nearest_animal_for_breeding) nearest_animal_for_breeding = abs(animals->rabbits[l].position_x - animals->rabbits[k].position_x) + abs(animals->rabbits[l].position_y - animals->rabbits[k].position_y);
+							}
+						}
+						if(nearest_animal_for_breeding != 1000)
+						{
+							for(unsigned int l = 0; l < animals->rabbits_counter; l++)
+							{
+								if(l == k) continue;
+								if(abs(animals->rabbits[l].position_x - animals->rabbits[k].position_x) <= animals->rabbits[k].sight_range && abs(animals->rabbits[l].position_y - animals->rabbits[k].position_y) <= animals->rabbits[k].sight_range && animals->rabbits[l].pregnant == -1 && animals->rabbits[l].owned_food >= 2 && animals->rabbits[k].sex != animals->rabbits[l].sex)
+								{
+									if(abs(animals->rabbits[l].position_x - animals->rabbits[k].position_x) + abs(animals->rabbits[l].position_y - animals->rabbits[k].position_y) == nearest_animal_for_breeding)
+									{
+										if(animals->rabbits[k].position_x > animals->rabbits[l].position_x)
+										{
+											animals->rabbits[k].position_x--;
+											goto rabbits_eat;
+										}
+										else if(animals->rabbits[k].position_x < animals->rabbits[l].position_x)
+										{
+											animals->rabbits[k].position_x++;
+											goto rabbits_eat;
+										}
+										else if(animals->rabbits[k].position_y > animals->rabbits[l].position_y)
+										{
+											animals->rabbits[k].position_y--;
+											goto rabbits_eat;
+										}
+										else if(animals->rabbits[k].position_y < animals->rabbits[l].position_y)
+										{
+											animals->rabbits[k].position_y++;
+											goto rabbits_eat;
+										}
+										goto rabbits_eat;
+									}
+								}
+							}
+						}
+					}
+					
+					if(animals->rabbits[k].owned_food != animals->rabbits[k].food_capacity) //looking for food
+					{
+						for(int l = animals->rabbits[k].sight_range * -1; l <= animals->rabbits[k].sight_range; l++)
+						{
+							for(int m = animals->rabbits[k].sight_range * -1; m <= animals->rabbits[k].sight_range; m++)
+							{
+								if(animals->rabbits[k].position_x + m < map_size && animals->rabbits[k].position_x + m >= 0 && animals->rabbits[k].position_y + l < map_size && animals->rabbits[k].position_y + l >= 0)
+								{
+									if(map[animals->rabbits[k].position_x + m][animals->rabbits[k].position_y + l] == 1 && nearest_food > abs(m) + abs(l)) nearest_food = abs(m) + abs(l);	
+								}
+							}
+						}
+						if(nearest_food != 1000)
+						{
+							for(int l = animals->rabbits[k].sight_range * -1; l <= animals->rabbits[k].sight_range; l++)
+							{
+								for(int m = animals->rabbits[k].sight_range * -1; m <= animals->rabbits[k].sight_range; m++)
+								{
+									if(animals->rabbits[k].position_x + m < map_size && animals->rabbits[k].position_x + m >= 0 && animals->rabbits[k].position_y + l < map_size && animals->rabbits[k].position_y + l >= 0)
+									{
+										if(map[animals->rabbits[k].position_x + m][animals->rabbits[k].position_y + l] == 1 && nearest_food == abs(m) + abs(l))
+										{
+											if(m > 0)
+											{
+												animals->rabbits[k].position_x++;
+												goto rabbits_eat;
+											}
+											else if(m < 0)
+											{
+												animals->rabbits[k].position_x--;
+												goto rabbits_eat;
+											}
+											else if(l > 0)
+											{
+												animals->rabbits[k].position_y++;
+												goto rabbits_eat;
+											}
+											else if(l < 0)
+											{
+												animals->rabbits[k].position_y--;
+												goto rabbits_eat;
+											}
+											else goto rabbits_eat;
+										}
+									}
+								}
+							}
+						}
+					}
+					
+					random = rand()%4; //when we didnt found other rabbit nor food we are moving in random way
+					if(random == 0)
+					{
+						if(animals->rabbits[k].position_x + 1 < map_size) animals->rabbits[k].position_x++;
+						else animals->rabbits[k].position_x--;
+					}
+					if(random == 1) 
+					{
+						if(animals->rabbits[k].position_x >= 1) animals->rabbits[k].position_x--;
+						else animals->rabbits[k].position_x++;
+					}
+					if(random == 2) 
+					{
+						if(animals->rabbits[k].position_y + 1 < map_size) animals->rabbits[k].position_y++;
+						else animals->rabbits[k].position_y--;
+					}
+					if(random == 3)
+					{
+						if(animals->rabbits[k].position_y >= 1) animals->rabbits[k].position_y--;
+						else animals->rabbits[k].position_y++;
+					}
+				}
+	////////////////rabbits eat////////////////////////////////////////////////////////////
+				rabbits_eat:
+				animals->rabbits[k].eat(map);
+	////////////////rabbits reproduction////////////////////////////////////////////////////////////			
+				if(animals->rabbits[k].sex == 0 && animals->rabbits[k].owned_food >= 2 && animals->rabbits[k].pregnant == -1)
+				{
+					for(int z = 0; z < animals->rabbits_counter; z++)
+					{
+						if(animals->rabbits[z].sex == 1 && animals->rabbits[z].owned_food >=2 && animals->rabbits[z].position_x == animals->rabbits[k].position_x && animals->rabbits[z].position_y == animals->rabbits[k].position_y)
+						{
+							if(rand()%100 < (animals->rabbits[k].reproduction_probability + animals->rabbits[z].reproduction_probability)*50)
+							{
+								animals->rabbits[k].pregnant = 1;
+								animals->rabbits[k].owned_food--;
+								if(rand()%2 == 0) sex = 0;
+								else sex = 1;
+								if(rand()%2 == 0) food_capacity = animals->rabbits[k].food_capacity;
+								else food_capacity = animals->rabbits[z].food_capacity;
+								if(rand()%10 == 0) food_capacity++;
+								else if(rand()%10 == 0) food_capacity--;
+								if(rand()%2 == 0) sight_range = animals->rabbits[k].sight_range;
+								else sight_range = animals->rabbits[z].sight_range;
+								if(rand()%10 == 0) sight_range++;
+								else if(rand()%10 == 0) sight_range--;
+								if(rand()%2 == 0) speed = animals->rabbits[k].speed;
+								else speed = animals->rabbits[z].speed;
+								if(rand()%10 == 0) speed++;
+								else if(rand()%10 == 0) speed--;
+								if(rand()%2 == 0) agility = animals->rabbits[k].agility;
+								else agility = animals->rabbits[z].agility;
+								if(rand()%10 == 0) agility++;
+								else if(rand()%10 == 0) agility--;
+								if(rand()%2 == 0) reproduction_probability = animals->rabbits[k].reproduction_probability;
+								else reproduction_probability = animals->rabbits[z].reproduction_probability;
+								if(rand()%10 == 0) reproduction_probability+=0.02;
+								else if(rand()%10 == 0) reproduction_probability-=0.02;
+								animals->rabbits_baby_new(animals->rabbits[k].position_x, animals->rabbits[k].position_y, 0, sex, food_capacity, sight_range, speed, agility, reproduction_probability, -1, -1, 1);
+								animals->rabbits[k].baby_animal = animals->rabbits_baby_counter - 1;
+								break;
+							}
+							else break;
+						}
+					}
+				}
+				else if(animals->rabbits[k].sex == 1 && animals->rabbits[k].owned_food >= 2)
+				{
+					for(int z = 0; z < animals->rabbits_counter; z++)
+					{
+						if(animals->rabbits[z].sex == 0 && animals->rabbits[z].owned_food >= 2 && animals->rabbits[z].pregnant == -1 && animals->rabbits[z].position_x == animals->rabbits[k].position_x && animals->rabbits[z].position_y == animals->rabbits[k].position_y)
+						{
+							if(rand()%100 < (animals->rabbits[k].reproduction_probability + animals->rabbits[z].reproduction_probability)*50)
+							{
+								animals->rabbits[z].pregnant = 1;
+								animals->rabbits[z].owned_food--;
+								if(rand()%2 == 0) sex = 0;
+								else sex = 1;
+								if(rand()%2 == 0) food_capacity = animals->rabbits[k].food_capacity;
+								else food_capacity = animals->rabbits[z].food_capacity;
+								if(rand()%10 == 0) food_capacity++;
+								else if(rand()%10 == 0) food_capacity--;
+								if(rand()%2 == 0) sight_range = animals->rabbits[k].sight_range;
+								else sight_range = animals->rabbits[z].sight_range;
+								if(rand()%10 == 0) sight_range++;
+								else if(rand()%10 == 0) sight_range--;
+								if(rand()%2 == 0) speed = animals->rabbits[k].speed;
+								else speed = animals->rabbits[z].speed;
+								if(rand()%10 == 0) speed++;
+								else if(rand()%10 == 0) speed--;
+								if(rand()%2 == 0) agility = animals->rabbits[k].agility;
+								else agility = animals->rabbits[z].agility;
+								if(rand()%10 == 0) agility++;
+								else if(rand()%10 == 0) agility--;
+								if(rand()%2 == 0) reproduction_probability = animals->rabbits[k].reproduction_probability;
+								else reproduction_probability = animals->rabbits[z].reproduction_probability;
+								if(rand()%10 == 0) reproduction_probability+=0.02;
+								else if(rand()%10 == 0) reproduction_probability-=0.02;
+								animals->rabbits_baby_new(animals->rabbits[k].position_x, animals->rabbits[k].position_y, 0, sex, food_capacity, sight_range, speed, agility, reproduction_probability, -1, -1, 1);
+								animals->rabbits[z].baby_animal = animals->rabbits_baby_counter - 1;
+								break;
+							}
+							else break;
+						}
+					}
+				}	
+			}
+///////////////////////////////////////////////////////////////////////////foxes////////////////////////////////////////////////////////////
+			for(unsigned int k = 0; k < animals->foxes_counter; k++)
+			{
+				nearest_food = 1000;
+				nearest_animal_for_breeding = 1000;	
+	////////////////foxes moves///////////////////////////////////////////////////////////////////
+				if(animals->foxes[k].movements != 0 )
+				{
+					animals->foxes[k].movements--;
+					
+					if(animals->foxes[k].owned_food >= 2 && animals->foxes[k].pregnant == -1) //looking for animal to breed
+					{
+						for(unsigned int l = 0; l < animals->foxes_counter; l++)
+						{
+							if(abs(animals->foxes[l].position_x - animals->foxes[k].position_x) <= animals->foxes[k].sight_range && abs(animals->foxes[l].position_y - animals->foxes[k].position_y) <= animals->foxes[k].sight_range && animals->foxes[l].pregnant == -1 && animals->foxes[l].owned_food >= 2 && animals->foxes[k].sex != animals->foxes[l].sex)
+							{
+								if(abs(animals->foxes[l].position_x - animals->foxes[k].position_x) + abs(animals->foxes[l].position_y - animals->foxes[k].position_y) < nearest_animal_for_breeding) nearest_animal_for_breeding = abs(animals->foxes[l].position_x - animals->foxes[k].position_x) + abs(animals->foxes[l].position_y - animals->foxes[k].position_y);
+							}
+						}
+						if(nearest_animal_for_breeding != 1000)
+						{
+							for(unsigned int l = 0; l < animals->foxes_counter; l++)
+							{
+								if(abs(animals->foxes[l].position_x - animals->foxes[k].position_x) <= animals->foxes[k].sight_range && abs(animals->foxes[l].position_y - animals->foxes[k].position_y) <= animals->foxes[k].sight_range && animals->foxes[l].pregnant == -1 && animals->foxes[l].owned_food >= 2 && animals->foxes[k].sex != animals->foxes[l].sex)
+								{
+									if(abs(animals->foxes[l].position_x - animals->foxes[k].position_x) + abs(animals->foxes[l].position_y - animals->foxes[k].position_y) == nearest_animal_for_breeding)
+									{
+										if(animals->foxes[k].position_x > animals->foxes[l].position_x)
+										{
+											animals->foxes[k].position_x--;
+											goto foxes_eat;
+										}
+										else if(animals->foxes[k].position_x < animals->foxes[l].position_x)
+										{
+											animals->foxes[k].position_x++;
+											goto foxes_eat;
+										}
+										else if(animals->foxes[k].position_y > animals->foxes[l].position_y)
+										{
+											animals->foxes[k].position_y--;
+											goto foxes_eat;
+										}
+										else if(animals->foxes[k].position_y < animals->foxes[l].position_y)
+										{
+											animals->foxes[k].position_y++;
+											goto foxes_eat;
+										}
+										goto foxes_eat;
+									}
+								}
+							}
+						}
+					}
+					
+					if(animals->foxes[k].owned_food != animals->foxes[k].food_capacity) //looking for food
+					{
+						for(int l = 0; l < animals->rabbits_counter; l++)
+						{
+							if(abs(animals->foxes[k].position_x - animals->rabbits[l].position_x) <= animals->foxes[k].sight_range && abs(animals->foxes[k].position_y - animals->rabbits[l].position_y) <= animals->foxes[k].sight_range)
+							{
+								if(abs(animals->foxes[k].position_x - animals->rabbits[l].position_x) + abs(animals->foxes[k].position_y - animals->rabbits[l].position_y) < nearest_food) nearest_food = abs(animals->foxes[k].position_x - animals->rabbits[l].position_x) + abs(animals->foxes[k].position_y - animals->rabbits[l].position_y);
+							}
+						}
+						if(nearest_food != 1000)
+						{
+							for(int l = 0; l < animals->rabbits_counter; l++)
+							{
+								if(abs(animals->foxes[k].position_x - animals->rabbits[l].position_x) <= animals->foxes[k].sight_range && abs(animals->foxes[k].position_y - animals->rabbits[l].position_y) <= animals->foxes[k].sight_range)
+								{
+									if(abs(animals->foxes[k].position_x - animals->rabbits[l].position_x) + abs(animals->foxes[k].position_y - animals->rabbits[l].position_y) == nearest_food)
+									{
+										if(animals->foxes[k].position_x > animals->rabbits[l].position_x)
+										{
+											animals->foxes[k].position_x--;
+											goto foxes_eat;
+										}
+										if(animals->foxes[k].position_x < animals->rabbits[l].position_x)
+										{
+											animals->foxes[k].position_x++;
+											goto foxes_eat;
+										}
+										if(animals->foxes[k].position_y > animals->rabbits[l].position_y)
+										{
+											animals->foxes[k].position_y--;
+											goto foxes_eat;
+										}
+										if(animals->foxes[k].position_y < animals->rabbits[l].position_y)
+										{
+											animals->foxes[k].position_y++;
+											goto foxes_eat;
+										}
+										else goto foxes_eat;
+									}
+								}
+							}
+						}
+					}
+
+					random = rand()%4; //when we didnt found other foxes nor food we are moving in random way
+					if(random == 0)
+					{
+						if(animals->foxes[k].position_x + 1 < map_size) animals->foxes[k].position_x++;
+						else animals->foxes[k].position_x--;
+					}
+					if(random == 1) 
+					{
+						if(animals->foxes[k].position_x >= 1) animals->foxes[k].position_x--;
+						else animals->foxes[k].position_x++;
+					}
+					if(random == 2) 
+					{
+						if(animals->foxes[k].position_y + 1 < map_size) animals->foxes[k].position_y++;
+						else animals->foxes[k].position_y--;
+					}
+					if(random == 3)
+					{
+						if(animals->foxes[k].position_y >= 1) animals->foxes[k].position_y--;
+						else animals->foxes[k].position_y++;
+					}
+				}
+	////////////////foxes eat////////////////////////////////////////////////////////////
+				foxes_eat:
+				for(int l = 0; l < animals->rabbits_counter; l++)
+				{
+					if(animals->foxes[k].position_x == animals->rabbits[l].position_x && animals->foxes[k].position_y == animals->rabbits[l].position_y)
+					{
+						if(rand()%10 + animals->foxes[k].agility - animals->rabbits[l].agility >= 8)
+						{
+							animals->foxes[k].owned_food+= 3;
+							animals->foxes[k].owned_food+= animals->rabbits[l].owned_food/2;
+							if(animals->foxes[k].owned_food > animals->foxes[k].food_capacity) animals->foxes[k].owned_food = animals->foxes[k].food_capacity;
+							animals->rabbits_delete(l);
+							break;
+						}
+						else break;
+					}
+				}
+	////////////////foxes reproduction////////////////////////////////////////////////////////////			
+				if(animals->foxes[k].sex == 0 && animals->foxes[k].owned_food >= 3 && animals->foxes[k].pregnant == -1)
+				{
+					for(int z = 0; z < animals->foxes_counter; z++)
+					{
+						if(animals->foxes[z].sex == 1 && animals->foxes[z].owned_food >= 3 && animals->foxes[z].position_x == animals->foxes[k].position_x && animals->foxes[z].position_y == animals->foxes[k].position_y)
+						{
+							if(rand()%100 < (animals->foxes[k].reproduction_probability + animals->foxes[z].reproduction_probability)*50)
+							{
+								animals->foxes[k].pregnant = 3;
+								animals->foxes[k].owned_food-=2;
+								if(rand()%2 == 0) sex = 0;
+								else sex = 1;
+								if(rand()%2 == 0) food_capacity = animals->foxes[k].food_capacity;
+								else food_capacity = animals->foxes[z].food_capacity;
+								if(rand()%10 == 0) food_capacity++;
+								else if(rand()%10 == 0) food_capacity--;
+								if(rand()%2 == 0) sight_range = animals->foxes[k].sight_range;
+								else sight_range = animals->foxes[z].sight_range;
+								if(rand()%10 == 0) sight_range++;
+								else if(rand()%10 == 0) sight_range--;
+								if(rand()%2 == 0) speed = animals->foxes[k].speed;
+								else speed = animals->foxes[z].speed;
+								if(rand()%10 == 0) speed++;
+								else if(rand()%10 == 0) speed--;
+								if(rand()%2 == 0) agility = animals->foxes[k].agility;
+								else agility = animals->foxes[z].agility;
+								if(rand()%10 == 0) agility++;
+								else if(rand()%10 == 0) agility--;
+								if(rand()%2 == 0) reproduction_probability = animals->foxes[k].reproduction_probability;
+								else reproduction_probability = animals->foxes[z].reproduction_probability;
+								if(rand()%10 == 0) reproduction_probability+=0.02;
+								else if(rand()%10 == 0) reproduction_probability-=0.02;
+								animals->foxes_baby_new(animals->foxes[k].position_x, animals->foxes[k].position_y, 0, sex, food_capacity, sight_range, speed, agility, reproduction_probability, -1, -1, 2);
+								animals->foxes[k].baby_animal = animals->foxes_baby_counter - 1;
+								break;
+							}
+							else break;
+						}
+					}
+				}
+				else if(animals->foxes[k].sex == 1 && animals->foxes[k].owned_food >= 3)
+				{
+					for(int z = 0; z < animals->foxes_counter; z++)
+					{
+						if(animals->foxes[z].sex == 0 && animals->foxes[z].owned_food >= 3 && animals->foxes[z].pregnant == -1 && animals->foxes[z].position_x == animals->foxes[k].position_x && animals->foxes[z].position_y == animals->foxes[k].position_y)
+						{
+							if(rand()%100 < (animals->foxes[k].reproduction_probability + animals->foxes[z].reproduction_probability)*50)
+							{
+								animals->foxes[z].pregnant = 3;
+								animals->foxes[z].owned_food-=2;
+								if(rand()%2 == 0) sex = 0;
+								else sex = 1;
+								if(rand()%2 == 0) food_capacity = animals->foxes[k].food_capacity;
+								else food_capacity = animals->foxes[z].food_capacity;
+								if(rand()%10 == 0) food_capacity++;
+								else if(rand()%10 == 0) food_capacity--;
+								if(rand()%2 == 0) sight_range = animals->foxes[k].sight_range;
+								else sight_range = animals->foxes[z].sight_range;
+								if(rand()%10 == 0) sight_range++;
+								else if(rand()%10 == 0) sight_range--;
+								if(rand()%2 == 0) speed = animals->foxes[k].speed;
+								else speed = animals->foxes[z].speed;
+								if(rand()%10 == 0) speed++;
+								else if(rand()%10 == 0) speed--;
+								if(rand()%2 == 0) agility = animals->foxes[k].agility;
+								else agility = animals->foxes[z].agility;
+								if(rand()%10 == 0) agility++;
+								else if(rand()%10 == 0) agility--;
+								if(rand()%2 == 0) reproduction_probability = animals->foxes[k].reproduction_probability;
+								else reproduction_probability = animals->foxes[z].reproduction_probability;
+								if(rand()%10 == 0) reproduction_probability+=0.02;
+								else if(rand()%10 == 0) reproduction_probability-=0.02;
+								animals->foxes_baby_new(animals->foxes[k].position_x, animals->foxes[k].position_y, 0, sex, food_capacity, sight_range, speed, agility, reproduction_probability, -1, -1, 2);
+								animals->foxes[z].baby_animal = animals->foxes_baby_counter - 1;
+								break;
+							}
+							else break;
+						}
+					}
+				}	
+			}
+		}
+////////////////animals survive////////////////////////////////////////////////////////////
+		for(unsigned int k = 0; k < animals->rabbits_counter; k++)
+		{
+			if(animals->rabbits[k].pregnant >= 0)
+			{
+				animals->rabbits[k].pregnant--;
+				if(animals->rabbits[k].pregnant == -1) 
+				{
+					animals->rabbits_new(animals->rabbits[k].position_x, animals->rabbits[k].position_y, 0, animals->rabbits_baby[animals->rabbits[k].baby_animal].sex, animals->rabbits_baby[animals->rabbits[k].baby_animal].food_capacity, animals->rabbits_baby[animals->rabbits[k].baby_animal].sight_range, animals->rabbits_baby[animals->rabbits[k].baby_animal].speed, animals->rabbits_baby[animals->rabbits[k].baby_animal].agility, animals->rabbits_baby[animals->rabbits[k].baby_animal].reproduction_probability, -1, -1, 1);
+					animals->rabbits_baby_delete(animals->rabbits[k].baby_animal);
+					animals->rabbits[k].baby_animal = -1;
+				}
+			}
+			if(animals->rabbits[k].survive() == 0)
+			{
+				animals->rabbits_delete(k);
+				k--; //needed becouse function rabbits_delete() is changing order of rabbits in array
+			}
+		}
+		
+		for(unsigned int k = 0; k < animals->foxes_counter; k++)
+		{
+			if(animals->foxes[k].pregnant >= 0)
+			{
+				animals->foxes[k].pregnant--;
+				if(animals->foxes[k].pregnant == -1) 
+				{
+					animals->foxes_new(animals->foxes[k].position_x, animals->foxes[k].position_y, 0, animals->foxes_baby[animals->foxes[k].baby_animal].sex, animals->foxes_baby[animals->foxes[k].baby_animal].food_capacity, animals->foxes_baby[animals->foxes[k].baby_animal].sight_range, animals->foxes_baby[animals->foxes[k].baby_animal].speed, animals->foxes_baby[animals->foxes[k].baby_animal].agility, animals->foxes_baby[animals->foxes[k].baby_animal].reproduction_probability, -1, -1, 1);
+					animals->foxes_baby_delete(animals->foxes[k].baby_animal);
+					animals->foxes[k].baby_animal = -1;
+				}
+			}
+			if(animals->foxes[k].survive() == 0)
+			{
+				animals->foxes_delete(k);
+				k--; //needed becouse function foxes_delete() is changing order of foxes in array
+			}
+		}
+		
+		printf("round %5d  |  start: rabbits = %5d  finish: rabbits = %5d  |  start: foxes = %5d  finish: foxes = %5d\n",i + 1,number_of_rabbits_start, animals->rabbits_counter, number_of_foxes_start, animals->foxes_counter);
+		number_of_rabbits_start = animals->rabbits_counter;
+		number_of_foxes_start = animals->foxes_counter;
+	}
+}
